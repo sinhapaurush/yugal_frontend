@@ -1,27 +1,8 @@
-function getbyid(id){
-    return document.getElementById(id);
-}
-function getbytag(id){
-    return document.getElementsByTagName(id);
-}
-function getbyclass(id){
-    return document.getElementsByClassName(id);
-}
-function getbyquery(id){
-    return document.querySelector(id);
-}
 function hover(id, act){
     document.getElementById(id).addEventListener("mouseover", act)
 }
 function clicked(id, act){
     document.getElementById(id).addEventListener("click", act);
-}
-function title(string){
-    if (string === undefined){
-        return document.getElementsByTagName("title")[0].innerHTML;
-    }else{
-        document.getElementsByTagName("title")[0].innerHTML = string;
-    }
 }
 function delete_cookie(cookiename) {
     document.cookie = cookiename + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
@@ -30,12 +11,6 @@ function delete_cookie(cookiename) {
     } else {
         return false;
     }
-}
-function widget(id){
-    return document.getElementById(id);
-}
-function select(id){
-    return document.getElementById(id);
 }
 function open(dest) {
     window.location = dest;
@@ -77,17 +52,81 @@ const yugal = {
     send: (what) => {
         document.getElementsByTagName("title")[0].innerHTML = what.title;
         document.getElementsByTagName("yugal-root")[0].innerHTML = what.body;
-        document.getElementsByTagName("yugal-screen-head")[0].innerHTML = what.head;
-        window.history.pushState({"html":what.body,"pageTitle":what.title},"", what.title.replace(/[^\w\s]/gi, '-').replace(" ", "-").toLowerCase());
+        let headTag = document.getElementsByTagName("head")[0].innerHTML;
+        headTag = headTag.split("<!--PAGE SPECIFIC <head> CODE BELOW-->");
+        document.getElementsByTagName("head")[0].innerHTML = `${headTag[0]}<!--PAGE SPECIFIC <head> CODE BELOW-->${what.head}`;
+        document.getElementsByTagName("meta").title.content = what.title;
+        history.pushState({page: 1}, what.title, what.pageName)
     }
 };
-const screen = (title, head, body) => {
+const comp = (title, head, body, url) => {
     return {
         title: title,
         head: head, 
-        body: body
+        body: body,
+        pageName: url
     };
 }
 const gts = (stru) => {
     yugal.send(stru);
+}
+const _ = (tag) => {
+    let comp = document.querySelector(tag);
+    return {
+        html: (html) => html ==undefined ? comp.innerHTML : comp.innerHTML = html,
+        attr: (attr, prop) => prop == undefined ? comp.getAttribute(attr) : comp.setAttribute(attr, prop),
+        val: (val) => val == undefined ? comp.getAttribute("value") : comp.setAttribute("value", val),
+        del: () => comp.remove(),
+        hint: (hint) => hint == undefined ? comp.getAttribute("placeholder") : comp.setAttribute("placeholder", hint),
+        css: (css) => css == undefined ? comp.getAttribute("style") : comp.setAttribute("style", css),
+        addCss: (css) => {
+            count = comp.getAttribute("style").length;
+            if (comp.getAttribute("style")[count-1] === ";") {
+                comp.setAttribute("style", `${comp.getAttribute("style")}${css}`)
+            } else {
+                comp.setAttribute("style", `${comp.getAttribute("style")};${css}`)
+            }
+        }
+    }
+} 
+function onRender(dothis){
+    setTimeout(dothis, 10);
+}
+const Router = ({initial, error404, screens}) => {
+    function dothis(){
+        let init = initial == undefined ? screens[0].page : initial;
+        const uri = window.location.href;
+        let req = uri.split("/");
+        req = req[req.length - 1];
+        if (req === ""){
+            yugal.send(init());
+        }else{
+            const svar = screens.find(
+                (scrn)=>{
+                    return scrn.name === req
+                }
+            );
+            if (svar == undefined){
+                if (error404 == undefined){
+                    yugal.send(
+                        comp(
+                            `ERROR 404`,
+                            ``,
+                            `
+                                ERROR FINDING THE PAGE
+                            `
+                        )
+                    );
+                }else{
+                    yugal.send(error404());
+                }
+            }else{
+                yugal.send(svar.page());
+            }
+        }
+    }
+    dothis();
+    window.onpopstate = function(event) {
+        dothis(); 
+    }
 }
